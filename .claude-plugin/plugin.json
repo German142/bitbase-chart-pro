@@ -1,0 +1,14 @@
+{
+  "name": "bitbase-chart-pro",
+  "displayName": "Bitbase Chart Pro",
+  "version": "1.0.0",
+  "description": "Unofficial chart studio for crypto traders: pulls Bitbase futures candles (Binance fallback), finds swings, and renders clean, share-ready charts with support/resistance, trendlines, order-book walls, Elliott wave counts, scenario projections and a tiled watermark of your handle.",
+  "author": {
+    "name": "Mehdi Mohammadian",
+    "url": "https://x.com/germanarc1"
+  },
+  "homepage": "https://github.com/German142/bitbase-chart-pro",
+  "repository": "https://github.com/German142/bitbase-chart-pro",
+  "license": "MIT",
+  "keywords": ["crypto", "trading", "charts", "bitbase", "elliott-wave", "technical-analysis", "matplotlib"]
+}

@@ -1,0 +1,30 @@
+{
+  "data": "data.json",
+  "out": "SUI_Elliott.png",
+  "title": "5 Waves Complete → ABC Correction",
+  "subtitle": "SUIUSDT Perp · Bitbase · 1h · Wave C in progress",
+  "price_format": "{:.3f}",
+  "ylim": [0.72, 1.38],
+  "projection_bars": 80,
+  "watermark": "@yourhandle",
+  "waves": [
+    {"time": "2026-09-18 13:00", "price": 0.7816, "label": "0", "color": "grey",  "position": "down"},
+    {"time": "2026-09-22 02:00", "price": 1.0813, "label": "1", "color": "white", "position": "up"},
+    {"time": "2026-09-23 18:00", "price": 0.9335, "label": "2", "color": "white", "position": "down"},
+    {"time": "2026-09-26 01:00", "price": 1.2170, "label": "3", "color": "white", "position": "up"},
+    {"time": "2026-09-26 22:00", "price": 1.1302, "label": "4", "color": "white", "position": "down"},
+    {"time": "2026-09-27 23:00", "price": 1.2916, "label": "5", "color": "gold",  "position": "up"},
+    {"time": "2026-09-29 04:00", "price": 1.0972, "label": "A", "color": "amber", "position": "down"},
+    {"time": "2026-09-30 15:00", "price": 1.2114, "label": "B", "color": "amber", "position": "up"}
+  ],
+  "levels": [
+    {"price": 1.2916, "label": "W5 TOP 1.292", "color": "red"},
+    {"price": 1.2114, "label": "B 1.211 · INVALID", "color": "orange"},
+    {"price": 1.0813, "label": "W1 TOP 1.081", "color": "grey"}
+  ],
+  "zones": [{"from": 1.017, "to": 1.097, "color": "green", "legend": "C target zone 1.02 – 1.10 (C = 0.618 – 1.0 × A)"}],
+  "scenarios": [
+    {"legend": "Main: wave C down → 1.02 – 1.10", "color": "red", "style": "dashed", "path": [[12, 1.128], [22, 1.150], [58, 1.058]]},
+    {"legend": "Alt: break 1.2114 → wave 5 extends", "color": "grey", "style": "dotted", "path": [[10, 1.190], [18, 1.172], [40, 1.245]]}
+  ]
+}

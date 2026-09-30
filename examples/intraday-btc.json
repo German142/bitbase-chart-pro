@@ -1,0 +1,23 @@
+{
+  "data": "data.json",
+  "out": "BTC_Scenarios.png",
+  "title": "Falling Wedge: Scenarios",
+  "projection_bars": 40,
+  "watermark": "@yourhandle",
+  "trendlines": [
+    {"from": ["2026-09-30 19:00", 84400], "to": ["2026-09-30 21:00", 83950], "extend_to": "projection", "color": "blue", "legend": "Falling wedge"},
+    {"from": ["2026-09-30 19:40", 84050], "to": ["2026-09-30 21:20", 83580], "extend_to": "projection", "color": "blue", "legend": "Falling wedge"}
+  ],
+  "walls": [
+    {"from": 83880, "to": 83920, "side": "bid", "legend": "Bid wall 83.9K"},
+    {"from": 84080, "to": 84120, "side": "ask", "legend": "Ask wall 84.1K"}
+  ],
+  "levels": [
+    {"price": 84095, "label": "84,095", "color": "purple"},
+    {"price": 83300, "label": "83,300", "color": "green"}
+  ],
+  "scenarios": [
+    {"legend": "Bullish: break 84.1K → 84.4K", "color": "green", "style": "dashed", "path": [[5, 84150], [9, 84050], [16, 84420]]},
+    {"legend": "Bearish: lose 83.9K → 83.3K", "color": "red", "style": "dashed", "path": [[5, 83700], [9, 83800], [16, 83300]]}
+  ]
+}
