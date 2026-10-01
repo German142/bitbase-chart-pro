@@ -43,3 +43,12 @@ Every config key is documented at the top of `render.py`. Two full examples are 
 ## License
 
 MIT
+
+## Two looks
+
+| Dark trading look (default) | Light posting look (`"theme": "light"`) |
+|---|---|
+| ![intraday](examples/intraday-btc.png) | ![light](examples/light-sui-weekly.png) |
+| Entries, SL/TP tags, order-book walls, legend | TradingView-style zones with inline labels + ghost scenario candles |
+
+Config: `examples/light-sui-weekly.json`. Ghost candles are a sketch, not a forecast; the chart says so.

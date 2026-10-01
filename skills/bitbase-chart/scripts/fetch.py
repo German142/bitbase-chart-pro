@@ -17,7 +17,7 @@ Data format written:
 import argparse, json, sys, time, datetime as dt, urllib.request, urllib.error
 
 STEPS = {"1m": 60_000, "5m": 300_000, "15m": 900_000, "30m": 1_800_000, "1h": 3_600_000,
-         "4h": 14_400_000, "1d": 86_400_000}
+         "4h": 14_400_000, "1d": 86_400_000, "1w": 604_800_000}
 UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) bitbase-chart-pro/1.0"}
 
 

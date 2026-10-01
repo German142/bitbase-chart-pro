@@ -1,7 +1,7 @@
 {
   "name": "bitbase-chart-pro",
   "displayName": "Bitbase Chart Pro",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Unofficial chart studio for crypto traders: pulls Bitbase futures candles (Binance fallback), finds swings, and renders clean, share-ready charts with support/resistance, trendlines, order-book walls, Elliott wave counts, scenario projections and a tiled watermark of your handle.",
   "author": {
     "name": "Mehdi Mohammadian",

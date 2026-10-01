@@ -30,6 +30,10 @@ Config keys (all optional unless marked):
   waves            [{"time", "price", "label", "color", "position": "up"|"down", "degree": "(1)"}]
   scenarios        [{"legend", "color", "style": "dashed"|"dotted"|"solid", "path": [[bars_ahead, price], ...]}]
   legend_loc       matplotlib legend location (default "upper left")
+  theme            "dark" (default, detailed trading look) or "light" (clean TradingView-style look for posting)
+  ghost            sketched scenario candles in the projection area (a story, not a forecast):
+                   {"path": [close, close, ...] one per future bar, "color", "label": "SCENARIO (not a prediction)", "seed"}
+  zones[].label    inline label drawn at the right edge of the zone (used instead of the legend on big-picture charts)
 Colors: green, red, orange, gold, white, grey, purple, blue, teal or any hex.
 """
 import json, sys, datetime as dt
@@ -39,13 +43,20 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle, FancyArrowPatch, Patch
 from matplotlib.lines import Line2D
 
-BG, PANEL, GRID, TXT, MUT = "#0b0f14", "#10161d", "#1a222c", "#e6edf3", "#8b949e"
-UP, DN = "#26a69a", "#ef5350"
-NAMED = {"green": "#2ecc71", "red": "#ff5c5c", "orange": "#ff9f43", "gold": "#f0b90b", "white": "#e6edf3",
-         "grey": "#8b949e", "gray": "#8b949e", "purple": "#b146c2", "blue": "#5b8cff", "teal": "#26a69a",
-         "amber": "#ffb454"}
+THEMES = {
+    "dark": dict(BG="#0b0f14", PANEL="#10161d", GRID="#1a222c", TXT="#e6edf3", MUT="#8b949e", UP="#26a69a", DN="#ef5350",
+                 TAGTXT="#0b0f14", EDGE="#2a3441", WM="#ffffff", WM_ALPHA=0.07,
+                 NAMED={"green": "#2ecc71", "red": "#ff5c5c", "orange": "#ff9f43", "gold": "#f0b90b", "white": "#e6edf3",
+                        "grey": "#8b949e", "gray": "#8b949e", "purple": "#b146c2", "blue": "#5b8cff", "teal": "#26a69a",
+                        "amber": "#ffb454"}),
+    # clean TradingView-style look for posting: light background, green/black candles, soft zones
+    "light": dict(BG="#f4f6fa", PANEL="#eceff5", GRID="#dde2ea", TXT="#1e222d", MUT="#787b86", UP="#089981", DN="#1e222d",
+                  TAGTXT="#ffffff", EDGE="#c9cfd9", WM="#1e222d", WM_ALPHA=0.06,
+                  NAMED={"green": "#089981", "red": "#f23645", "orange": "#ff9800", "gold": "#b8860b", "white": "#1e222d",
+                         "grey": "#787b86", "gray": "#787b86", "purple": "#9c27b0", "blue": "#2962ff", "teal": "#089981",
+                         "amber": "#e69500"}),
+}
 STYLES = {"dashed": "--", "dotted": ":", "solid": "-"}
-col = lambda c, d="#e6edf3": NAMED.get(c, c) if c else d
 
 
 def auto_fmt(price):
@@ -54,6 +65,9 @@ def auto_fmt(price):
 
 def main(path):
     cfg = json.load(open(path))
+    th = THEMES.get(cfg.get("theme", "dark"), THEMES["dark"])
+    BG, PANEL, GRID, TXT, MUT, UP, DN, NAMED = (th[k] for k in ("BG", "PANEL", "GRID", "TXT", "MUT", "UP", "DN", "NAMED"))
+    col = lambda c, d=TXT: NAMED.get(c, c) if c else d
     d = json.load(open(cfg["data"]))
     rows = [(dt.datetime.fromtimestamp((d["t0"] + i * d["step_ms"]) / 1000), *r) for i, r in enumerate(d["rows"])]
     n = len(rows); last = rows[-1]; T0 = rows[0][0]; step_h = d["step_ms"] / 3_600_000
@@ -64,6 +78,7 @@ def main(path):
         return (dt.datetime.strptime(s, "%Y-%m-%d %H:%M") - T0).total_seconds() / 3600 / step_h
 
     prices = [r[2] for r in rows] + [r[3] for r in rows]
+    prices += list(cfg.get("ghost", {}).get("path", []))
     for sc in cfg.get("scenarios", []):
         prices += [p for _, p in sc["path"]]
     for lv in cfg.get("levels", []):
@@ -80,8 +95,11 @@ def main(path):
 
     # projection area
     ax.add_patch(Rectangle((n + 1, lo), proj - 1, rng, color=PANEL, zorder=0))
-    ax.axvline(n + 1, color="#2a3441", lw=1, zorder=1)
-    ax.text(n + proj / 2, hi - rng * 0.02, "PROJECTION", color="#4b5866", fontsize=10, weight="bold", ha="center", va="top")
+    ax.axvline(n + 1, color=th["EDGE"], lw=1, zorder=1)
+    ghost = cfg.get("ghost")
+    ptxt = ghost.get("label", "SCENARIO (not a prediction)") if ghost else "PROJECTION"
+    ax.text(n + proj / 2, hi - rng * 0.02, ptxt, color=col(ghost.get("color", "blue")) if ghost else MUT, fontsize=10.5,
+            weight="bold", ha="center", va="top", alpha=0.9)
 
     # candles (dimmed when a wave count is drawn on top)
     alpha = 0.55 if cfg.get("waves") else 0.95
@@ -90,6 +108,17 @@ def main(path):
         cc = UP if c >= o else DN
         ax.plot([i, i], [l, h], color=cc, lw=0.8, zorder=3, alpha=alpha)
         ax.add_patch(Rectangle((i - 0.35, min(o, c)), 0.7, max(abs(c - o), bmin), color=cc, zorder=3, alpha=alpha))
+
+    # ghost candles: a sketched path through the projection area, drawn from the last close
+    if ghost:
+        import random
+        rnd = random.Random(ghost.get("seed", 7)); gc = col(ghost.get("color", "blue")); c0 = last[4]
+        for i, nc in enumerate(ghost["path"]):
+            x = n + 2 + i; amp = ghost.get("wick", 0.035)
+            gh = max(c0, nc) * (1 + rnd.uniform(amp * 0.4, amp)); gl = min(c0, nc) * (1 - rnd.uniform(amp * 0.4, amp))
+            ax.plot([x, x], [gl, gh], color=gc, lw=0.9, alpha=0.7, zorder=3)
+            ax.add_patch(Rectangle((x - 0.35, min(c0, nc)), 0.7, max(abs(nc - c0), bmin), fc=gc, ec=gc, alpha=0.5, zorder=3))
+            c0 = nc
 
     handles = []
     # zones
@@ -100,6 +129,9 @@ def main(path):
             ax.plot([x0, xmax], [y, y], color=c, lw=1, alpha=0.6, zorder=2)
         if z.get("legend"):
             handles.append(Patch(facecolor=c, alpha=0.35, edgecolor=c, label=z["legend"]))
+        if z.get("label"):
+            ax.text(xmax - 0.8, (z["from"] + z["to"]) / 2, z["label"], color=c, fontsize=11, weight="bold", va="center",
+                    ha="right", zorder=6, bbox=dict(boxstyle="round,pad=0.25", fc=BG, ec="none", alpha=0.9))
     # order-book walls
     for w in cfg.get("walls", []):
         c = NAMED["green"] if w.get("side") == "bid" else NAMED["red"]
@@ -131,11 +163,17 @@ def main(path):
                 ax.text(x, yy + (off if up else -off) * 0.95, w["degree"], color=NAMED["gold"], fontsize=14,
                         weight="bold", ha="center", va="center", zorder=8)
     # levels as tags outside the plot
-    for lv in cfg.get("levels", []) + [{"price": last[4], "label": f"NOW {fmt.format(last[4])}", "color": "gold", "now": True}]:
+    # tags that sit too close are pushed apart (top to bottom), the line stays at the real price
+    tags = sorted(cfg.get("levels", []) + [{"price": last[4], "label": f"NOW {fmt.format(last[4])}", "color": "gold", "now": True}],
+                  key=lambda t: -t["price"])
+    ax_h_pt = 0.765 * 9 * 72; gap = 19 * rng / ax_h_pt; prev = None
+    for lv in tags:
+        y = lv["price"] if prev is None else min(lv["price"], prev - gap); prev = y
+        dy = (y - lv["price"]) / rng * ax_h_pt
         c = col(lv.get("color"), NAMED["grey"])
         ax.axhline(lv["price"], color=c, lw=1.0, ls=(0, (4, 3)), alpha=0.7, zorder=1)
-        ax.annotate(f" {lv['label']} ", xy=(1.0, lv["price"]), xycoords=("axes fraction", "data"), xytext=(6, 0),
-                    textcoords="offset points", color=BG, fontsize=10, weight="bold", va="center", ha="left",
+        ax.annotate(f" {lv['label']} ", xy=(1.0, lv["price"]), xycoords=("axes fraction", "data"), xytext=(6, dy),
+                    textcoords="offset points", color=th["TAGTXT"], fontsize=10, weight="bold", va="center", ha="left",
                     bbox=dict(boxstyle="round,pad=0.35", fc=c, ec="none"), annotation_clip=False)
     # scenarios (listed first in the legend, in config order)
     scen = []
@@ -150,14 +188,19 @@ def main(path):
     handles = scen + handles
     if handles:
         leg = ax.legend(handles=handles, loc=cfg.get("legend_loc", "upper left"), fontsize=11.5, frameon=True,
-                        facecolor=PANEL, edgecolor="#2a3441", labelcolor=TXT, borderpad=0.9, handlelength=2.6)
+                        facecolor=PANEL, edgecolor=th["EDGE"], labelcolor=TXT, borderpad=0.9, handlelength=2.6)
         leg.set_zorder(20)
 
     # axes
     span_h = n * step_h
-    xfmt = cfg.get("x_label_format") or ("%H:%M" if span_h <= 36 else "%d.%m")
+    xfmt = cfg.get("x_label_format") or ("%H:%M" if span_h <= 36 else "%d.%m" if span_h <= 24 * 60 else "%b %Y")
     every = max(1, round((span_h / 8) / step_h))
     ticks = list(range(0, n, every))
+    if 36 < span_h <= 24 * 60:  # multi-day: one tick on each midnight instead of drifting through the day
+        ticks = [i for i, r in enumerate(rows) if r[0].hour == 0 and r[0].minute == 0] or ticks
+    elif span_h > 24 * 60:  # multi-month: first candle of a month (every 6 months beyond ~2 years)
+        months = (1, 7) if span_h > 24 * 700 else (1, 4, 7, 10) if span_h > 24 * 365 else range(1, 13)
+        ticks = [i for i, r in enumerate(rows) if r[0].month in months and (i == 0 or rows[i - 1][0].month != r[0].month)] or ticks
     ax.set_xticks(ticks); ax.set_xticklabels([rows[i][0].strftime(xfmt) for i in ticks], color=MUT, fontsize=11)
     ax.tick_params(axis="y", colors=MUT, labelsize=10.5)
     ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: fmt.format(v)))
@@ -165,7 +208,7 @@ def main(path):
 
     sym = d.get("symbol", "").upper()
     ticker = cfg.get("ticker") or "$" + sym.replace("_", "").replace("USDT", "")
-    tk = fig.text(0.055, 0.935, ticker, color=NAMED["gold"], fontsize=30, weight="bold", va="center")
+    tk = fig.text(0.055, 0.935, ticker, color=NAMED["gold"] if cfg.get("theme", "dark") == "dark" else UP, fontsize=30, weight="bold", va="center")
     fig.canvas.draw()
     xt = fig.transFigure.inverted().transform(tk.get_window_extent().get_points())[1][0] + 0.012
     fig.text(xt, 0.935, cfg["title"], color=TXT, fontsize=30, weight="bold", va="center")
@@ -177,7 +220,7 @@ def main(path):
     if wm:
         for gx in (0.14, 0.40, 0.66):
             for gy in (0.20, 0.47, 0.74):
-                fig.text(gx + (0.13 if gy == 0.47 else 0), gy, wm, color="#ffffff", alpha=0.07, fontsize=30,
+                fig.text(gx + (0.13 if gy == 0.47 else 0), gy, wm, color=th["WM"], alpha=th["WM_ALPHA"], fontsize=30,
                          weight="bold", rotation=22, ha="center", va="center", zorder=50)
     out = cfg.get("out", "chart.png")
     fig.savefig(out, facecolor=BG); plt.close(fig)

@@ -68,6 +68,22 @@ python3 "${CLAUDE_SKILL_DIR}/scripts/render.py" chart.json
 ```
 Scenario `path` points are `[candles ahead of the last candle, price]`.
 
+### Two looks
+
+- **Dark trading look** (default): entries, SL/TP tags, order-book walls, legend. For deciding a trade.
+- **Light posting look** (`"theme": "light"`): TradingView-style, light background, green/black candles, soft zones with inline
+  `label`s instead of a legend, and optional **ghost candles** that sketch a scenario through the projection area.
+  Use it for X/Telegram big-picture charts (1D/1W). Keep it minimal: 2–5 zones, one story.
+```json
+{"data": "data.json", "out": "sui-weekly.png", "theme": "light", "ticker": "$SUI",
+ "title": "Consolidation Before the Next Leg to $2", "watermark": "@userhandle", "ylim": [0, 5.9], "projection_bars": 34,
+ "zones": [{"from": 1.90, "to": 2.08, "color": "red", "label": "Resistance 1.90–2.08", "projection_only": false},
+           {"from": 0.95, "to": 1.07, "color": "blue", "label": "Support 0.95–1.07", "projection_only": false}],
+ "ghost": {"color": "blue", "path": [1.12, 1.22, 1.09, 1.19, 1.27, 1.42, 1.52, 1.74, 1.97, 2.06]}}
+```
+Ghost candles are a sketch, not a forecast. The renderer labels the area "SCENARIO (not a prediction)"; keep that honest
+and keep the path inside levels the data supports. Weekly data: `fetch.py SYMBOL --interval 1w --limit 180`.
+
 ## 4. Quality check (always)
 
 Open or view the PNG before handing it over:

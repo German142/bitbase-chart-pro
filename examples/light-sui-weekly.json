@@ -1,0 +1,10 @@
+{"data":"sui-1w-data.json","out":"light-sui-weekly.png","theme":"light",
+ "ticker":"$SUI","title":"Consolidation Before the Next Leg to $2","watermark":"@yourhandle",
+ "price_format":"{:.2f}","ylim":[0.0,5.9],"projection_bars":34,
+ "zones":[
+  {"from":4.40,"to":5.40,"color":"red","label":"ATH zone 4.40–5.40","projection_only":false},
+  {"from":1.90,"to":2.08,"color":"red","label":"Resistance 1.90–2.08","projection_only":false},
+  {"from":1.45,"to":1.55,"color":"red","label":"Resistance 1.45–1.55","projection_only":false},
+  {"from":0.95,"to":1.07,"color":"blue","label":"Support 0.95–1.07","projection_only":false},
+  {"from":0.60,"to":0.68,"color":"blue","label":"Cycle low 0.635","projection_only":false}],
+ "ghost":{"color":"blue","seed":7,"path":[1.12,1.22,1.09,1.19,1.27,1.14,1.24,1.31,1.42,1.36,1.52,1.47,1.63,1.58,1.74,1.69,1.86,1.80,1.97,2.06,1.92,2.03]}}
