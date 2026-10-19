@@ -16,6 +16,7 @@ Config keys (all optional unless marked):
   ticker           e.g. "$SUI" (default from symbol)
   title*           headline, e.g. "Falling Wedge: Scenarios"
   subtitle         default "<SYMBOL> Perp · <source> · <interval> · last <close>"
+  now_tag          false = no gold "NOW" tag (for charts that are posted hours after rendering)
   price_format     python format, e.g. "{:.4f}" or "{:,.0f}" (auto if missing)
   ylim             [low, high] (auto with padding if missing)
   projection_bars  empty candles reserved on the right (default 60)
@@ -30,10 +31,13 @@ Config keys (all optional unless marked):
   waves            [{"time", "price", "label", "color", "position": "up"|"down", "degree": "(1)"}]
   scenarios        [{"legend", "color", "style": "dashed"|"dotted"|"solid", "path": [[bars_ahead, price], ...]}]
   legend_loc       matplotlib legend location (default "upper left")
-  theme            "dark" (default, detailed trading look) or "light" (clean TradingView-style look for posting)
+  theme            "dark" (default, detailed trading look), "black" (same on pure black) or "light" (clean TradingView-style look for posting)
   ghost            sketched scenario candles in the projection area (a story, not a forecast):
                    {"path": [close, close, ...] one per future bar, "color", "label": "SCENARIO (not a prediction)", "seed"}
   zones[].label    inline label drawn at the right edge of the zone (used instead of the legend on big-picture charts)
+  msb_ob           Market Structure Break + Order Block overlay (see msb_ob.py), e.g.
+                   {"zigzag_len": 9, "fib_factor": 0.273, "show_zigzag": true, "max_zones": 3, "show_mitigated": false,
+                    "show_msb": true, "min_size_pct": 0}   (true = defaults). Bu-OB green demand, Be-OB red supply.
 Colors: green, red, orange, gold, white, grey, purple, blue, teal or any hex.
 """
 import json, sys, datetime as dt
@@ -42,6 +46,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle, FancyArrowPatch, Patch
 from matplotlib.lines import Line2D
+sys.path.insert(0, __import__('os').path.dirname(__import__('os').path.abspath(__file__)))
+import msb_ob
 
 THEMES = {
     "dark": dict(BG="#0b0f14", PANEL="#10161d", GRID="#1a222c", TXT="#e6edf3", MUT="#8b949e", UP="#26a69a", DN="#ef5350",
@@ -49,6 +55,11 @@ THEMES = {
                  NAMED={"green": "#2ecc71", "red": "#ff5c5c", "orange": "#ff9f43", "gold": "#f0b90b", "white": "#e6edf3",
                         "grey": "#8b949e", "gray": "#8b949e", "purple": "#b146c2", "blue": "#5b8cff", "teal": "#26a69a",
                         "amber": "#ffb454"}),
+    "black": dict(BG="#000000", PANEL="#0b0b0b", GRID="#1a1a1a", TXT="#f4f5ff", MUT="#9a9a9a", UP="#26a69a", DN="#ef5350",
+                  TAGTXT="#000000", EDGE="#2e2e2e", WM="#ffffff", WM_ALPHA=0.07,
+                  NAMED={"green": "#2ecc71", "red": "#ff5c5c", "orange": "#ff9f43", "gold": "#f0b90b", "white": "#f4f5ff",
+                         "grey": "#9a9a9a", "gray": "#9a9a9a", "purple": "#b146c2", "blue": "#5b8cff", "teal": "#26a69a",
+                         "amber": "#ffb454"}),
     # clean TradingView-style look for posting: light background, green/black candles, soft zones
     "light": dict(BG="#f4f6fa", PANEL="#eceff5", GRID="#dde2ea", TXT="#1e222d", MUT="#787b86", UP="#089981", DN="#1e222d",
                   TAGTXT="#ffffff", EDGE="#c9cfd9", WM="#1e222d", WM_ALPHA=0.06,
@@ -132,6 +143,32 @@ def main(path):
         if z.get("label"):
             ax.text(xmax - 0.8, (z["from"] + z["to"]) / 2, z["label"], color=c, fontsize=11, weight="bold", va="center",
                     ha="right", zorder=6, bbox=dict(boxstyle="round,pad=0.25", fc=BG, ec="none", alpha=0.9))
+    # MSB-OB indicator: zigzag, structure breaks and order blocks computed from the candles shown
+    mo = cfg.get("msb_ob")
+    if mo:
+        mo = {} if mo is True else mo
+        res = msb_ob.detect(rows, mo.get("zigzag_len", 9), mo.get("fib_factor", 0.273))
+        if mo.get("show_zigzag", True) and res["pivots"]:
+            pz = [(p[0], p[1]) for p in res["pivots"]]; pz.append((n - 1, last[4]))
+            ax.plot([p[0] for p in pz], [p[1] for p in pz], color=MUT, lw=1.2, ls=(0, (3, 2)), alpha=0.8, zorder=3)
+        if mo.get("show_msb", True):
+            for m in res["msb"]:
+                mc = NAMED["green"] if m["side"] == "bull" else NAMED["red"]
+                ax.plot([m["from"], m["idx"]], [m["price"], m["price"]], color=mc, lw=1.3, ls=":", zorder=4)
+                ax.text((m["from"] + m["idx"]) / 2, m["price"] + (rng * 0.012 if m["side"] == "bull" else -rng * 0.012), "MSB",
+                        color=mc, fontsize=9.5, weight="bold", ha="center", va="bottom" if m["side"] == "bull" else "top", zorder=6)
+        shown = [o for o in res["obs"] if mo.get("show_mitigated", False) or o["mitigated_idx"] is None]
+        shown = [o for o in shown if (o["high"] - o["low"]) / max(o["low"], 1e-12) * 100 >= mo.get("min_size_pct", 0)]
+        for o in shown[-mo.get("max_zones", 3):]:
+            oc = NAMED["green"] if o["side"] == "bull" else NAMED["red"]
+            x1 = xmax if o["mitigated_idx"] is None else o["mitigated_idx"]
+            ax.add_patch(Rectangle((o["idx"], o["low"]), x1 - o["idx"], o["high"] - o["low"], color=oc,
+                                   alpha=0.12 if o["mitigated_idx"] is not None else 0.2, zorder=2))
+            for y in (o["low"], o["high"]):
+                ax.plot([o["idx"], x1], [y, y], color=oc, lw=1, alpha=0.7, zorder=2)
+            ax.text(o["idx"] + 0.6, (o["low"] + o["high"]) / 2, "Bu-OB" if o["side"] == "bull" else "Be-OB", color=oc,
+                    fontsize=10.5, weight="bold", va="center", ha="left", zorder=6,
+                    bbox=dict(boxstyle="round,pad=0.2", fc=BG, ec="none", alpha=0.85))
     # order-book walls
     for w in cfg.get("walls", []):
         c = NAMED["green"] if w.get("side") == "bid" else NAMED["red"]
@@ -164,8 +201,8 @@ def main(path):
                         weight="bold", ha="center", va="center", zorder=8)
     # levels as tags outside the plot
     # tags that sit too close are pushed apart (top to bottom), the line stays at the real price
-    tags = sorted(cfg.get("levels", []) + [{"price": last[4], "label": f"NOW {fmt.format(last[4])}", "color": "gold", "now": True}],
-                  key=lambda t: -t["price"])
+    now_tag = [{"price": last[4], "label": f"NOW {fmt.format(last[4])}", "color": "gold", "now": True}] if cfg.get("now_tag", True) else []
+    tags = sorted(cfg.get("levels", []) + now_tag, key=lambda t: -t["price"])   # "now_tag": false for charts that get posted later
     ax_h_pt = 0.765 * 9 * 72; gap = 19 * rng / ax_h_pt; prev = None
     for lv in tags:
         y = lv["price"] if prev is None else min(lv["price"], prev - gap); prev = y

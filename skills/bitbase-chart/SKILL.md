@@ -11,6 +11,7 @@ Requires `python3` with `matplotlib` (`pip install matplotlib`).
 Scripts live in `${CLAUDE_SKILL_DIR}/scripts/`:
 - `fetch.py`: download candles into `data.json`
 - `swings.py`: list swing highs/lows so levels and wave counts come from the data
+- `msb_ob.py`: Market Structure Break + Order Block indicator (ZigZag, MSB, Bu-OB / Be-OB zones); also available inside `render.py` via the `msb_ob` config key
 - `render.py`: draw the chart from a JSON config (layout rules are built in, see its docstring)
 
 ## 1. Get the data
@@ -96,3 +97,17 @@ Ask the user for their handle for the watermark if it is unknown. The watermark 
 ## 5. Optional post text
 
 If the user wants a caption, keep it short and trader-style: ticker with `$`, prices with `$`, the key level, "Hold X → Y / Lose X → Z", few emojis. Do not promise returns. Never post anything publicly yourself; hand the text to the user.
+
+## 4. Optional indicator: Market Structure Break + Order Blocks (MSB-OB)
+
+Draws the ZigZag, structure breaks ("MSB") and order blocks (green **Bu-OB** demand, red **Be-OB** supply) from the candles themselves.
+Defaults follow the popular TradingView indicator (ZigZag length 9, fib factor 0.273). It is an independent implementation, so signals can differ slightly from TradingView.
+```bash
+python3 "${CLAUDE_SKILL_DIR}/scripts/msb_ob.py" data.json --len 9 --fib 0.273     # list MSBs and active order blocks
+```
+In `chart.json` add `"msb_ob": true` (or an object):
+```json
+"msb_ob": {"zigzag_len": 9, "fib_factor": 0.273, "max_zones": 3, "show_zigzag": true, "show_msb": true, "show_mitigated": false, "min_size_pct": 0}
+```
+Larger `zigzag_len` (14-21) gives fewer, bigger structure breaks; smaller (5-7) is for scalping timeframes. Mitigated blocks (a candle closed through them) are hidden unless `show_mitigated` is true. See `examples/msb-ob-btc.json`.
+Always describe the zones as areas of interest and structure, never as a guaranteed signal.

@@ -1,0 +1,9 @@
+{
+  "data": "btc-1h-data.json",
+  "out": "msb-ob-btc.png",
+  "theme": "light",
+  "title": "Market Structure & Order Blocks",
+  "projection_bars": 20,
+  "watermark": "@yourhandle",
+  "msb_ob": {"zigzag_len": 9, "fib_factor": 0.273, "max_zones": 3, "show_zigzag": true, "show_msb": true, "show_mitigated": false}
+}

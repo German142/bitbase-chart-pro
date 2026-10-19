@@ -6,11 +6,13 @@ Not affiliated with or endorsed by Bitbase. Charts are analysis, not financial a
 
 ![Elliott wave example](examples/elliott-sui.png)
 ![Intraday scenario example](examples/intraday-btc.png)
+![MSB-OB indicator example](examples/msb-ob-btc.png)
 
 ## What it does
 
 - **Real data:** pulls candles from Bitbase's public futures API. If Cloudflare blocks the request, it falls back to Binance. A browser export gives exact Bitbase prices (see `skills/bitbase-chart/SKILL.md`).
 - **Structure from data:** `swings.py` lists pivots, so levels, trendlines and wave counts come from the data instead of guesses.
+- **MSB-OB indicator:** market structure breaks and order blocks (green Bu-OB, red Be-OB) from the candles, ZigZag 9 and fib 0.273 by default (`msb_ob.py` or the `msb_ob` config key).
 - **Clean layout by design:**
   - price tags sit outside the plot, with a gold NOW tag
   - scenarios are listed in a legend
@@ -35,6 +37,7 @@ Requirements: `python3` with `matplotlib` (`pip install matplotlib`).
 S=skills/bitbase-chart/scripts
 python3 $S/fetch.py SUIUSDT --interval 1h --limit 300 --out data.json
 python3 $S/swings.py data.json --window 10
+python3 $S/msb_ob.py data.json --len 9 --fib 0.273   # structure breaks + order blocks
 python3 $S/render.py examples/elliott-sui.json    # edit "data" to point at your data.json
 ```
 
